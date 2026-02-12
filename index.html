@@ -3,17 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>TODO Dashboard</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
     background: #0d1117;
     color: #e6edf3;
     min-height: 100vh;
+    min-height: 100dvh;
     padding: 16px;
-    padding-top: env(safe-area-inset-top, 16px);
-    padding-bottom: env(safe-area-inset-bottom, 16px);
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
 
   .header {
@@ -22,18 +25,9 @@
     padding-bottom: 16px;
     border-bottom: 1px solid #21262d;
   }
-  .header h1 {
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-    margin-bottom: 4px;
-  }
-  .header .updated {
-    font-size: 12px;
-    color: #7d8590;
-  }
+  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4px; }
+  .header .updated { font-size: 12px; color: #7d8590; }
 
-  /* Stats row */
   .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -47,24 +41,32 @@
     padding: 10px 6px;
     text-align: center;
   }
-  .stat .num {
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1;
-    margin-bottom: 2px;
-  }
-  .stat .label {
-    font-size: 10px;
-    color: #7d8590;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+  .stat .num { font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 2px; }
+  .stat .label { font-size: 10px; color: #7d8590; text-transform: uppercase; letter-spacing: 0.5px; }
   .stat.q1 .num { color: #f85149; }
   .stat.q2 .num { color: #d29922; }
   .stat.q3 .num { color: #58a6ff; }
   .stat.q4 .num { color: #7d8590; }
 
-  /* Quadrant sections */
+  /* Add task button */
+  .add-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    background: rgba(63,185,80,0.12);
+    border: 1px dashed #238636;
+    border-radius: 10px;
+    color: #3fb950;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .add-btn:active { background: rgba(63,185,80,0.25); }
+
   .quadrant {
     margin-bottom: 16px;
     border-radius: 10px;
@@ -89,28 +91,54 @@
     border-top: 1px solid #21262d;
     background: #161b22;
   }
-  .task-name {
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 4px;
-    line-height: 1.35;
-  }
+  .task-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; line-height: 1.35; }
   .task-meta {
     display: flex;
     gap: 12px;
     font-size: 11px;
     color: #7d8590;
     flex-wrap: wrap;
+    margin-bottom: 6px;
   }
   .days { font-weight: 600; }
   .days.warn { color: #d29922; }
   .days.danger { color: #f85149; }
-  .task-notes {
-    font-size: 12px;
-    color: #7d8590;
-    margin-top: 4px;
-    line-height: 1.4;
+  .task-notes { font-size: 12px; color: #7d8590; margin-bottom: 8px; line-height: 1.4; }
+
+  /* Action buttons */
+  .task-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
   }
+  .task-actions a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    border: none;
+  }
+  .task-actions a:active { opacity: 0.6; }
+
+  .btn-done {
+    background: rgba(63,185,80,0.15);
+    color: #3fb950;
+  }
+  .btn-move {
+    background: rgba(88,166,255,0.15);
+    color: #58a6ff;
+  }
+  .btn-delete {
+    background: rgba(248,81,73,0.1);
+    color: #f85149;
+  }
+
   .empty {
     padding: 14px;
     text-align: center;
@@ -120,7 +148,6 @@
     border-top: 1px solid #21262d;
   }
 
-  /* Backlog */
   .backlog {
     margin-top: 20px;
     border-radius: 10px;
@@ -143,7 +170,6 @@
     line-height: 1.4;
   }
 
-  /* Weekly score */
   .score {
     margin-top: 20px;
     text-align: center;
@@ -155,6 +181,48 @@
     color: #7d8590;
   }
   .score strong { color: #d29922; }
+
+  /* Move menu (bottom sheet) */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .overlay.active { display: flex; }
+  .sheet {
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    border-radius: 14px 14px 0 0;
+    width: 100%;
+    max-width: 500px;
+    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  }
+  .sheet-title {
+    padding: 12px 16px 8px;
+    font-size: 13px;
+    color: #7d8590;
+    font-weight: 600;
+    text-align: center;
+  }
+  .sheet a {
+    display: block;
+    padding: 14px 16px;
+    font-size: 15px;
+    color: #e6edf3;
+    text-decoration: none;
+    text-align: center;
+    border-top: 1px solid #21262d;
+  }
+  .sheet a:active { background: rgba(255,255,255,0.05); }
+  .sheet .cancel {
+    margin-top: 6px;
+    color: #58a6ff;
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -171,25 +239,41 @@
   <div class="stat q4"><div class="num">1</div><div class="label">Q4 🗑️</div></div>
 </div>
 
+<!-- Add Task -->
+<a class="add-btn" id="addBtn">＋ Add Task</a>
+
 <!-- Q1 -->
 <div class="quadrant q1">
   <div class="quadrant-header">🔴 Q1: URGENT + IMPORTANT</div>
+
   <div class="task">
     <div class="task-name">Software subscription audit ($5,462/mo)</div>
     <div class="task-meta">
       <span>Added Feb 7</span>
       <span class="days danger">5 days open</span>
     </div>
-    <div class="task-notes">Get Notion tracker from Mirielle or list all subs. Dead subs bleeding cash.</div>
+    <div class="task-notes">Get Notion tracker from Mirielle or list all subs.</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with Software subscription audit">✓ Done</a>
+      <a class="btn-move" data-task="Software subscription audit" data-q="Q1" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill Software subscription audit">✕ Delete</a>
+    </div>
   </div>
+
   <div class="task">
     <div class="task-name">Read & decide on COO recommendation</div>
     <div class="task-meta">
       <span>Added Feb 11</span>
       <span class="days">1 day open</span>
     </div>
-    <div class="task-notes">business/operations/coo-recommendation.md — People decisions, 90-day plan, financials.</div>
+    <div class="task-notes">business/operations/coo-recommendation.md — People decisions, 90-day plan.</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with COO recommendation">✓ Done</a>
+      <a class="btn-move" data-task="COO recommendation" data-q="Q1" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill COO recommendation">✕ Delete</a>
+    </div>
   </div>
+
   <div class="task">
     <div class="task-name">Edit Joanne new webinar + brief script</div>
     <div class="task-meta">
@@ -197,67 +281,93 @@
       <span class="days">1 day open</span>
     </div>
     <div class="task-notes">Joanne YouTube ads launching. Script + webinar edit needed.</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with Joanne webinar script">✓ Done</a>
+      <a class="btn-move" data-task="Joanne webinar script" data-q="Q1" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill Joanne webinar script">✕ Delete</a>
+    </div>
   </div>
 </div>
 
 <!-- Q2 -->
 <div class="quadrant q2">
   <div class="quadrant-header">🟡 Q2: IMPORTANT + NOT URGENT</div>
+
   <div class="task">
     <div class="task-name">Film blood test content video</div>
-    <div class="task-meta">
-      <span>Added Feb 7</span>
-      <span class="days warn">4 days open</span>
-    </div>
+    <div class="task-meta"><span>Added Feb 7</span><span class="days warn">4 days open</span></div>
     <div class="task-notes">Overdue from weekend</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with Film blood test video">✓ Done</a>
+      <a class="btn-move" data-task="Film blood test video" data-q="Q2" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill Film blood test video">✕ Delete</a>
+    </div>
   </div>
+
   <div class="task">
     <div class="task-name">Film hair product content video</div>
-    <div class="task-meta">
-      <span>Added Feb 7</span>
-      <span class="days warn">4 days open</span>
-    </div>
+    <div class="task-meta"><span>Added Feb 7</span><span class="days warn">4 days open</span></div>
     <div class="task-notes">Overdue from weekend</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with Film hair product video">✓ Done</a>
+      <a class="btn-move" data-task="Film hair product video" data-q="Q2" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill Film hair product video">✕ Delete</a>
+    </div>
   </div>
+
   <div class="task">
     <div class="task-name">Set up email forwarder to sonny@ascendsecrets.com</div>
-    <div class="task-meta">
-      <span>Added Feb 10</span>
-      <span class="days">1 day open</span>
-    </div>
+    <div class="task-meta"><span>Added Feb 10</span><span class="days">1 day open</span></div>
     <div class="task-notes">So Sonny can process emails</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with email forwarder setup">✓ Done</a>
+      <a class="btn-move" data-task="email forwarder setup" data-q="Q2" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill email forwarder setup">✕ Delete</a>
+    </div>
   </div>
+
   <div class="task">
     <div class="task-name">Message editor/team about B-roll pipeline</div>
-    <div class="task-meta">
-      <span>Added Feb 7</span>
-      <span class="days warn">4 days open</span>
-    </div>
+    <div class="task-meta"><span>Added Feb 7</span><span class="days warn">4 days open</span></div>
     <div class="task-notes">Doc at business/operations/video-editing/b-roll-pipeline.md</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with B-roll pipeline message">✓ Done</a>
+      <a class="btn-move" data-task="B-roll pipeline message" data-q="Q2" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill B-roll pipeline message">✕ Delete</a>
+    </div>
   </div>
+
   <div class="task">
     <div class="task-name">Get free Gemini API key</div>
-    <div class="task-meta">
-      <span>Added Feb 7</span>
-      <span class="days warn">4 days open</span>
-    </div>
+    <div class="task-meta"><span>Added Feb 7</span><span class="days warn">4 days open</span></div>
     <div class="task-notes">30 sec task: aistudio.google.com/apikey</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with Gemini API key">✓ Done</a>
+      <a class="btn-move" data-task="Gemini API key" data-q="Q2" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill Gemini API key">✕ Delete</a>
+    </div>
   </div>
+
   <div class="task">
     <div class="task-name">Send Sonny B-Roll Bank Google Sheet link</div>
-    <div class="task-meta">
-      <span>Added Feb 7</span>
-      <span class="days warn">4 days open</span>
-    </div>
+    <div class="task-meta"><span>Added Feb 7</span><span class="days warn">4 days open</span></div>
     <div class="task-notes">Needed for B-roll automation</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with B-Roll Bank Sheet link">✓ Done</a>
+      <a class="btn-move" data-task="B-Roll Bank Sheet link" data-q="Q2" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill B-Roll Bank Sheet link">✕ Delete</a>
+    </div>
   </div>
+
   <div class="task">
     <div class="task-name">Decide @SonnyAscend X/Twitter strategy</div>
-    <div class="task-meta">
-      <span>Added Feb 7</span>
-      <span class="days warn">4 days open</span>
-    </div>
+    <div class="task-meta"><span>Added Feb 7</span><span class="days warn">4 days open</span></div>
     <div class="task-notes">What should Sonny post?</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with SonnyAscend X strategy">✓ Done</a>
+      <a class="btn-move" data-task="SonnyAscend X strategy" data-q="Q2" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill SonnyAscend X strategy">✕ Delete</a>
+    </div>
   </div>
 </div>
 
@@ -272,17 +382,19 @@
   <div class="quadrant-header">🗑️ Q4: NOT URGENT + NOT IMPORTANT</div>
   <div class="task">
     <div class="task-name">Swipe Truth Tinder (1,637 notes)</div>
-    <div class="task-meta">
-      <span>Added Feb 7</span>
-      <span class="days warn">4 days open</span>
-    </div>
+    <div class="task-meta"><span>Added Feb 7</span><span class="days warn">4 days open</span></div>
     <div class="task-notes">Do when bored. No deadline.</div>
+    <div class="task-actions">
+      <a class="btn-done" data-cmd="done with Swipe Truth Tinder">✓ Done</a>
+      <a class="btn-move" data-task="Swipe Truth Tinder" data-q="Q4" onclick="showMove(this)">↕ Move</a>
+      <a class="btn-delete" data-cmd="kill Swipe Truth Tinder">✕ Delete</a>
+    </div>
   </div>
 </div>
 
 <!-- Backlog -->
 <div class="backlog">
-  <div class="backlog-header">📋 BACKLOG (Sonny handles when approved)</div>
+  <div class="backlog-header">📋 BACKLOG</div>
   <div class="backlog-item">Test Voyage AI vs SuperMemory comparison</div>
   <div class="backlog-item">Mine personal atomic notes for health content ideas</div>
   <div class="backlog-item">Build out @SonnyAscend X presence once strategy decided</div>
@@ -292,6 +404,69 @@
 <div class="score">
   Weekly Eisenhower Score: <strong>Tracking starts Feb 10-16</strong>
 </div>
+
+<!-- Move bottom sheet -->
+<div class="overlay" id="moveOverlay" onclick="hideMove(event)">
+  <div class="sheet" id="moveSheet">
+    <div class="sheet-title" id="moveTitle">Move task to…</div>
+    <a id="moveQ1" href="#">🔴 Q1: Urgent + Important</a>
+    <a id="moveQ2" href="#">🟡 Q2: Important + Not Urgent</a>
+    <a id="moveQ3" href="#">⚡ Q3: Urgent + Not Important</a>
+    <a id="moveQ4" href="#">🗑️ Q4: Not Urgent + Not Important</a>
+    <a class="cancel" onclick="hideMove(event)">Cancel</a>
+  </div>
+</div>
+
+<script>
+const WA = 'https://wa.me/6588911040?text=';
+
+// Done + Delete buttons → WhatsApp deep link
+document.querySelectorAll('[data-cmd]').forEach(el => {
+  el.addEventListener('click', e => {
+    e.preventDefault();
+    window.location.href = WA + encodeURIComponent(el.dataset.cmd);
+  });
+});
+
+// Add task button
+document.getElementById('addBtn').addEventListener('click', e => {
+  e.preventDefault();
+  window.location.href = WA + encodeURIComponent('add ');
+});
+
+// Move sheet
+let currentTask = '';
+let currentQ = '';
+
+function showMove(el) {
+  currentTask = el.dataset.task;
+  currentQ = el.dataset.q;
+  document.getElementById('moveTitle').textContent = 'Move "' + currentTask + '" to…';
+
+  const quads = ['Q1','Q2','Q3','Q4'];
+  quads.forEach(q => {
+    const link = document.getElementById('move' + q);
+    if (q === currentQ) {
+      link.style.display = 'none';
+    } else {
+      link.style.display = 'block';
+      link.onclick = (e) => {
+        e.preventDefault();
+        window.location.href = WA + encodeURIComponent('move ' + currentTask + ' to ' + q);
+      };
+    }
+  });
+
+  document.getElementById('moveOverlay').classList.add('active');
+}
+
+function hideMove(e) {
+  if (e.target === document.getElementById('moveOverlay') || e.target.classList.contains('cancel')) {
+    e.preventDefault();
+    document.getElementById('moveOverlay').classList.remove('active');
+  }
+}
+</script>
 
 </body>
 </html>
